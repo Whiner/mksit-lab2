@@ -7,10 +7,10 @@ import java.io.*;
  */
 public class LZ77 {
     public static final int DEFAULT_BUFF_SIZE = 1024;
-    protected int mBufferSize;
-    protected Reader mIn;
-    protected PrintWriter mOut;
-    protected StringBuffer mSearchBuffer;
+    private int mBufferSize;
+    private Reader mIn;
+    private PrintWriter mOut;
+    private StringBuffer mSearchBuffer;
 
     public LZ77() {
         this(DEFAULT_BUFF_SIZE);
@@ -29,6 +29,7 @@ public class LZ77 {
 
     public void unCompress(String infile) throws IOException {
         mIn = new BufferedReader(new FileReader(infile + ".lz77"));
+        mOut = new PrintWriter(new BufferedWriter(new FileWriter("uncompressed_" + infile)));
         StreamTokenizer st = new StreamTokenizer(mIn);
 
         st.ordinaryChar((int) ' ');
@@ -43,7 +44,7 @@ public class LZ77 {
             switch (st.ttype) {
                 case StreamTokenizer.TT_WORD:
                     mSearchBuffer.append(st.sval);
-                    System.out.print(st.sval);
+                    mOut.print(st.sval);
                     // Adjust search buffer size if necessary
                     trimSearchBuffer();
                     break;
@@ -54,7 +55,7 @@ public class LZ77 {
                         // we got a word instead of the separator,
                         // therefore the first number read was actually part of a word
                         mSearchBuffer.append(offset).append(st.sval);
-                        System.out.print(offset + st.sval);
+                        mOut.print(offset + st.sval);
                         break; // break out of the switch
                     }
                     // if we got this far then we must be reading a
@@ -63,7 +64,7 @@ public class LZ77 {
                     length = (int) st.nval;
                     // output substring from search buffer
                     String output = mSearchBuffer.substring(offset, offset + length);
-                    System.out.print(output);
+                    mOut.print(output);
                     mSearchBuffer.append(output);
                     // Adjust search buffer size if necessary
                     trimSearchBuffer();
@@ -73,6 +74,8 @@ public class LZ77 {
             }
         }
         mIn.close();
+        mOut.flush();
+        mOut.close();
     }
 
     public void compress(String infile) throws IOException {
@@ -113,7 +116,7 @@ public class LZ77 {
                     while (currentMatch.length() > 1 && matchIndex == -1) {
                         mOut.print(currentMatch.charAt(0));
                         mSearchBuffer.append(currentMatch.charAt(0));
-                        currentMatch = currentMatch.substring(1, currentMatch.length());
+                        currentMatch = currentMatch.substring(1);
                         matchIndex = mSearchBuffer.indexOf(currentMatch);
                     }
                 }

@@ -1,22 +1,32 @@
 package org.donntu.knt.mksit.lab2;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.File;
 
 /**
  * @author Shilenko Alexander
  */
 public class Main {
     public static void main(String[] args) {
-        LZ77 lz = new LZ77();
+
+
+        LZ77_v2 lz = new LZ77_v2(100);
         String filename = "file.txt";
+        String compressedFilename = "file.txt.lz77";
+        String decompressedFilename = "dec_file.txt";
         try {
-            lz.compress(filename);
-            lz.unCompress(filename);
-        } catch (FileNotFoundException f) {
-            System.err.println("File not found: " + filename);
-        } catch (IOException e) {
-            System.err.println("Problem processing file: " + filename);
+            lz.compress(filename, compressedFilename);
+            lz.decompress(compressedFilename, decompressedFilename);
+
+            System.out.println("compress percent = " + CompressQualifier.compressPercent(
+                    new File(filename),
+                    new File(compressedFilename))
+            );
+            System.out.println("is equals = " + CompressQualifier.isUncompressedEqualsSource(
+                    new File(filename),
+                    new File(decompressedFilename))
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }
