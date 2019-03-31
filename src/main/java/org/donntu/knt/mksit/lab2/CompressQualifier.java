@@ -8,7 +8,7 @@ import java.util.Optional;
  */
 public class CompressQualifier {
     public static double compressPercent(File source, File compressed) {
-        return source.length() / 100.0 * compressed.length();
+        return 100 - ((double)compressed.length() / (double)source.length() * 100.0);
     }
 
     public static boolean isUncompressedEqualsSource(File source, File uncompressed) {

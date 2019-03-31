@@ -1,9 +1,2 @@
-static double sumStream(Reader in)  throws  IOException  {
-      StreamTokenizer nums = new StreamTokenizer(in);
-      double  result = 0.0;
-       while  (nums.nextToken()   != StreamTokenizer.TT_EOF)   {
-               if (nums.ttype == StreamTokenizer.TT_NUMBER)
-                   result += nums.nval;
-    }
-     return  result;
-}
+ababababababababbaababababbbbbabaaba
+dadadadadadadadddddddadaaaaaaaaaaaaa

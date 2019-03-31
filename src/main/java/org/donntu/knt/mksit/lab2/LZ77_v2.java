@@ -14,13 +14,13 @@ import java.util.Arrays;
 public class LZ77_v2 {
 
     // 12 bits to store maximum offset distance.
-    public static final int MAX_WINDOW_SIZE = (1 << 12) - 1;
+    private static final int MAX_WINDOW_SIZE = (1 << 12) - 1;
 
     // 4 bits to store length of the match.
-    public static final int LOOK_AHEAD_BUFFER_SIZE = (1 << 4) - 1;
+    private static final int LOOK_AHEAD_BUFFER_SIZE = (1 << 4) - 1;
 
     // sliding window size
-    private int windowSize = MAX_WINDOW_SIZE;
+    private int windowSize;
 
     public LZ77_v2(int windowSize) {
         this.windowSize = Math.min(windowSize, MAX_WINDOW_SIZE);
@@ -74,6 +74,7 @@ public class LZ77_v2 {
         FileChannel outputChannel = null;
         RandomAccessFile outputFileStream = null;
         try {
+            new File(outputFileName).delete();
             inputFileStream = new BitInputStream(new BufferedInputStream(new FileInputStream(inputFileName)));
             outputFileStream = new RandomAccessFile(outputFileName, "rw");
             outputChannel = outputFileStream.getChannel();
