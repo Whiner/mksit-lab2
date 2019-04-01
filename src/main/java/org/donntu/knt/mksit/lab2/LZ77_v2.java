@@ -1,5 +1,7 @@
 package org.donntu.knt.mksit.lab2;
 
+import org.donntu.knt.mksit.lab2.v3.Match;
+
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -45,10 +47,10 @@ public class LZ77_v2 {
                 Match match = findMatchInSlidingWindow(data, i);
                 if (match != null) {
                     out.write(Boolean.TRUE);
-                    out.write((byte) (match.getDistance() >> 4));
-                    out.write((byte) (((match.getDistance() & 0x0F) << 4) | match.getLength()));
-                    //System.out.println("<1," + match.getDistance() + ", " + match.getLength() + ">");
-                    i = i + match.getLength();
+                    out.write((byte) (match.getLength() >> 4));
+                    out.write((byte) (((match.getLength() & 0x0F) << 4) | match.getOffset()));
+                    //System.out.println("<1," + match.getLength() + ", " + match.getOffset() + ">");
+                    i = i + match.getOffset();
                 } else {
                     out.write(Boolean.FALSE);
                     out.write(data[i]);
@@ -132,13 +134,13 @@ public class LZ77_v2 {
                 }
                 int destPos = m * (currentIndex - i);
                 System.arraycopy(data, i, tempArray, destPos, remaining);
-                if (Arrays.equals(tempArray, bytesToMatch) && bytesToMatch.length > match.getLength()) {
-                    match.setLength(bytesToMatch.length);
-                    match.setDistance(currentIndex - i);
+                if (Arrays.equals(tempArray, bytesToMatch) && bytesToMatch.length > match.getOffset()) {
+                    match.setOffset(bytesToMatch.length);
+                    match.setLength(currentIndex - i);
                 }
             }
         }
-        if (match.getLength() > 0 && match.getDistance() > 0)
+        if (match.getOffset() > 0 && match.getLength() > 0)
             return match;
         return null;
     }
