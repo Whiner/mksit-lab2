@@ -59,26 +59,27 @@ public class LZ77_v3_my {
     }
 
 
-    //TODO:решить как вытягивать совпадения, если цикл окончен
     private Match checkMatches(FlyingWindow window, StringBuffer text) {
         StringBuilder matchString = new StringBuilder();
-        char[] chars = window.getWindow().toString().toCharArray();
+        char[] windowChars = window.getWindow().toString().toCharArray();
         int currentTextPosition = 0;
         Match match = null;
-        for (int i = 0; i < chars.length; i++) {
-            final char aChar = chars[i];
+        while(currentTextPosition < windowChars.length) {
+            final char aChar = windowChars[currentTextPosition];
             if (aChar == text.charAt(currentTextPosition)) {
                 matchString.append(aChar);
                 currentTextPosition++;
             } else if (currentTextPosition != 0) {
-                match = new Match(
-                        window.getStartWindowPosition() + i - currentTextPosition,
-                        matchString.length()
-                );
                 break;
             }
         }
-        return null;
+        if(currentTextPosition > 1) {
+            match = new Match(
+                    window.getStartWindowPosition() + i - currentTextPosition,
+                    matchString.length()
+            );
+        }
+        return match;
     }
 
 }

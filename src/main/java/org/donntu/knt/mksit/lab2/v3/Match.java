@@ -12,10 +12,10 @@ public class Match {
         this(-1,-1);
     }
 
-    public Match(int matchLength, int matDistance) {
+    public Match(int offset, int length) {
         super();
-        this.offset = matchLength;
-        this.length = matDistance;
+        this.offset = offset;
+        this.length = length;
     }
 
     public int getOffset() {
