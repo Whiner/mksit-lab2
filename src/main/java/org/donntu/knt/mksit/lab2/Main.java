@@ -11,7 +11,7 @@ public class Main {
     public static void main(String[] args) {
 
 
-        LZ77_v3_my lz = new LZ77_v3_my(10);
+        LZ77_v3_my lz = new LZ77_v3_my(10, 10);
         String filename = "file.txt";
         String compressedFilename = "file.txt.lz77";
         String decompressedFilename = "dec_file.txt";
