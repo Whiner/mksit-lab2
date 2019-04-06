@@ -4,6 +4,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
+//TODO: сделать чтобы буфер уменьшался когда файл закончится
 public class LZ77_v3_my {
     private final int MAX_WINDOW_SIZE;
     private final int BUFFER_SIZE;
