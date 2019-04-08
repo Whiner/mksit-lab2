@@ -1,10 +1,7 @@
 package org.donntu.knt.mksit.lab2.v3;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 
-//TODO: сделать чтобы буфер уменьшался когда файл закончится
 public class LZ77_v3_my {
     private final int MAX_WINDOW_SIZE;
     private final int BUFFER_SIZE;
@@ -23,7 +20,7 @@ public class LZ77_v3_my {
             Buffer buffer = new Buffer();
             byte firstByte = randomAccessFile.readByte();
             bufferedWriter.write(firstByte);
-            System.out.print((char)firstByte);
+            System.out.print((char) firstByte);
             int step = 1;
 
             while (moveWindowAndBuffer(window, buffer, randomAccessFile, step)) {
@@ -77,8 +74,10 @@ public class LZ77_v3_my {
             } else {
                 file.seek(buffer.getStartBufferPosition() + buffer.getBuffer().length() + step);
                 if (file.read() == -1) {
-                    if(buffer.getBuffer().length() > 1) {
-                        buffer.deleteCharAt(0);
+                    if (buffer.getBuffer().length() > 1) {
+                        for (int i = 0; i < step; i++) {
+                            buffer.deleteCharAt(0);
+                        }
                         return true;
                     } else {
                         throw new IOException("File end");
@@ -106,14 +105,14 @@ public class LZ77_v3_my {
         int bufferOffset = 0;
         for (windowOffset = 0; windowOffset < windowChars.length; windowOffset++) {
             char windowChar = windowChars[windowOffset];
-            try{
+            try {
                 if (windowChar == buffer.getBuffer().charAt(bufferOffset)) {
                     matchString.append(windowChar);
                     bufferOffset++;
                 } else if (matchString.length() != 0) {
                     break;
                 }
-            }catch (StringIndexOutOfBoundsException e) {
+            } catch (StringIndexOutOfBoundsException e) {
                 break;
             }
         }
@@ -126,17 +125,51 @@ public class LZ77_v3_my {
         return match;
     }
 
-    /*private boolean fillBufferToMaxSize(Buffer buffer, RandomAccessFile file) {
-        try {
-            StringBuffer stringBuffer = buffer.getBuffer();
-            byte[] byteBuffer = new byte[BUFFER_SIZE - stringBuffer.length()];
-            file.seek(buffer.getStartBufferPosition() + stringBuffer.length());
-            file.read(byteBuffer);
-            stringBuffer.append(new String(byteBuffer));
-            return true;
-        } catch (IOException e) {
+    public void decompress(String inputFileName, String outputFileName) {
+        try (
+                BufferedReader bufferedReader = new BufferedReader(new FileReader(inputFileName));
+                RandomAccessFile randomAccessFile = new RandomAccessFile(outputFileName, "rw")
+        ) {
+            char character;
+            int read;
+            while ((read = bufferedReader.read()) != -1) {
+                character = (char) read;
+                if (character != '<') {
+                    randomAccessFile.write(character);
+                    System.out.print(character);
+                } else {
+                    Match match = readCodeBlock(bufferedReader);
+                    byte[] buffer = new byte[match.getLength()];
+                    long endPointer = randomAccessFile.getFilePointer();
+                    randomAccessFile.seek(match.getOffset());
+                    randomAccessFile.read(buffer);
+                    randomAccessFile.seek(endPointer);
+                    randomAccessFile.write(buffer);
+                    System.out.print(new String(buffer));
+                }
+            }
+        } catch (Exception e) {
             e.printStackTrace();
-            return false;
         }
-    }*/
+    }
+
+    private Match readCodeBlock(BufferedReader bufferedReader) throws IOException {
+        char character;
+        Match match = new Match();
+
+        StringBuilder buffer = new StringBuilder();
+
+        while ((character = (char) bufferedReader.read()) != '>') {
+            if (character != ';') {
+                buffer.append(character);
+            } else {
+                match.setOffset(Integer.valueOf(buffer.toString()));
+                buffer.setLength(0);
+            }
+        }
+
+        match.setLength(Integer.valueOf(buffer.toString()));
+
+        return match;
+    }
 }

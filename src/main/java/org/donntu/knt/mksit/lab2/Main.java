@@ -17,16 +17,15 @@ public class Main {
         String decompressedFilename = "dec_file.txt";
         try {
             lz.compress(filename, compressedFilename);
-            //lz.decompress(compressedFilename, decompressedFilename);
-
-            /*System.out.println("compress percent = " + CompressQualifier.compressPercent(
+            lz.decompress(compressedFilename, decompressedFilename);
+            System.out.println("compress percent = " + CompressQualifier.compressPercent(
                     new File(filename),
                     new File(compressedFilename))
             );
             System.out.println("is equals = " + CompressQualifier.isUncompressedEqualsSource(
                     new File(filename),
                     new File(decompressedFilename))
-            );*/
+            );
         } catch (Exception e) {
             e.printStackTrace();
         }
