@@ -20,20 +20,20 @@ public class LZ77_v3_my {
             Buffer buffer = new Buffer();
             byte firstByte = randomAccessFile.readByte();
             bufferedWriter.write(firstByte);
-            System.out.print((char) firstByte);
             int step = 1;
 
             while (moveWindowAndBuffer(window, buffer, randomAccessFile, step)) {
                 step = 1;
                 Match match = checkMatches(window, buffer);
                 if (match != null) {
-                    String str = "<" + match.getOffset() + ";" + match.getLength() + ">";
-                    bufferedWriter.write(str);
-                    System.out.print(str);
+                    bufferedWriter.write("<" + match.getOffset() + ";" + match.getLength() + ">");
                     step = match.getLength();
                 } else {
-                    bufferedWriter.write(buffer.getBuffer().charAt(0));
-                    System.out.print(buffer.getBuffer().charAt(0));
+                    if (buffer.getBuffer().length() == 0) {
+                        return;
+                    } else {
+                        bufferedWriter.write(buffer.getBuffer().charAt(0));
+                    }
                 }
             }
             StringBuffer stringBuffer = buffer.getBuffer();
@@ -136,7 +136,6 @@ public class LZ77_v3_my {
                 character = (char) read;
                 if (character != '<') {
                     randomAccessFile.write(character);
-                    System.out.print(character);
                 } else {
                     Match match = readCodeBlock(bufferedReader);
                     byte[] buffer = new byte[match.getLength()];
@@ -145,7 +144,6 @@ public class LZ77_v3_my {
                     randomAccessFile.read(buffer);
                     randomAccessFile.seek(endPointer);
                     randomAccessFile.write(buffer);
-                    System.out.print(new String(buffer));
                 }
             }
         } catch (Exception e) {
