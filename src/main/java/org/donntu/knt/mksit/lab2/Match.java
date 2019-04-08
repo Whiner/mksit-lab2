@@ -1,4 +1,4 @@
-package org.donntu.knt.mksit.lab2.v3;
+package org.donntu.knt.mksit.lab2;
 
 /**
  * @author Shilenko Alexander

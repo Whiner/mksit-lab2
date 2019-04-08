@@ -1,4 +1,4 @@
-package org.donntu.knt.mksit.lab2.v3;
+package org.donntu.knt.mksit.lab2;
 
 public class Buffer {
     private StringBuffer buffer = new StringBuffer();

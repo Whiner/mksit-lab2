@@ -2,141 +2,182 @@ package org.donntu.knt.mksit.lab2;
 
 import java.io.*;
 
-/**
- * @author Shilenko Alexander
- */
 public class LZ77 {
-    public static final int DEFAULT_BUFF_SIZE = 1024;
-    private int mBufferSize;
-    private Reader mIn;
-    private PrintWriter mOut;
-    private StringBuffer mSearchBuffer;
+    private final int MAX_WINDOW_SIZE;
+    private final int BUFFER_SIZE;
 
-    public LZ77() {
-        this(DEFAULT_BUFF_SIZE);
+    public LZ77(int maxWindowSize, int bufferSize) {
+        this.MAX_WINDOW_SIZE = maxWindowSize;
+        this.BUFFER_SIZE = bufferSize;
     }
 
-    public LZ77(int buffSize) {
-        mBufferSize = buffSize;
-        mSearchBuffer = new StringBuffer(mBufferSize);
-    }
+    public void compress(String inputFileName, String outputFileName) {
+        try (
+                RandomAccessFile randomAccessFile = new RandomAccessFile(inputFileName, "r");
+                BufferedWriter bufferedWriter = new BufferedWriter(
+                        new OutputStreamWriter(
+                                new FileOutputStream(outputFileName),
+                                "Cp1252"
+                        )
+                )
+        ) {
+            Buffer window = new Buffer();
+            Buffer buffer = new Buffer();
+            byte firstByte = randomAccessFile.readByte();
+            bufferedWriter.write(firstByte);
+            int step = 1;
 
-    private void trimSearchBuffer() {
-        if (mSearchBuffer.length() > mBufferSize) {
-            mSearchBuffer.delete(0, mSearchBuffer.length() - mBufferSize);
-        }
-    }
-
-    public void unCompress(String infile) throws IOException {
-        mIn = new BufferedReader(new FileReader(infile + ".lz77"));
-        mOut = new PrintWriter(new BufferedWriter(new FileWriter("uncompressed_" + infile)));
-        StreamTokenizer st = new StreamTokenizer(mIn);
-
-        st.ordinaryChar((int) ' ');
-        st.ordinaryChar((int) '.');
-        st.ordinaryChar((int) '-');
-        st.ordinaryChar((int) '\n');
-        st.wordChars((int) '\n', (int) '\n');
-        st.wordChars((int) ' ', (int) '}');
-
-        int offset, length;
-        while (st.nextToken() != StreamTokenizer.TT_EOF) {
-            switch (st.ttype) {
-                case StreamTokenizer.TT_WORD:
-                    mSearchBuffer.append(st.sval);
-                    mOut.print(st.sval);
-                    // Adjust search buffer size if necessary
-                    trimSearchBuffer();
-                    break;
-                case StreamTokenizer.TT_NUMBER:
-                    offset = (int) st.nval; // set the offset
-                    st.nextToken(); // get the separator (hopefully)
-                    if (st.ttype == StreamTokenizer.TT_WORD) {
-                        // we got a word instead of the separator,
-                        // therefore the first number read was actually part of a word
-                        mSearchBuffer.append(offset).append(st.sval);
-                        mOut.print(offset + st.sval);
-                        break; // break out of the switch
-                    }
-                    // if we got this far then we must be reading a
-                    // substitution pointer
-                    st.nextToken(); // get the length
-                    length = (int) st.nval;
-                    // output substring from search buffer
-                    String output = mSearchBuffer.substring(offset, offset + length);
-                    mOut.print(output);
-                    mSearchBuffer.append(output);
-                    // Adjust search buffer size if necessary
-                    trimSearchBuffer();
-                    break;
-                default:
-                    // consume a '~'
-            }
-        }
-        mIn.close();
-        mOut.flush();
-        mOut.close();
-    }
-
-    public void compress(String infile) throws IOException {
-        // set up input and output
-        mIn = new BufferedReader(new FileReader(infile));
-        mOut = new PrintWriter(new BufferedWriter(new FileWriter(infile + ".lz77")));
-
-        int nextChar;
-        String currentMatch = "";
-        int matchIndex = 0, tempIndex = 0;
-
-        // while there are more characters - read a character
-        while ((nextChar = mIn.read()) != -1) {
-            // look in our search buffer for a match
-            tempIndex = mSearchBuffer.indexOf(currentMatch + (char) nextChar);
-            // if match then append nextChar to currentMatch
-            // and update index of match
-            if (tempIndex != -1) {
-                currentMatch += (char) nextChar;
-                matchIndex = tempIndex;
-            } else {
-                // found longest match, now should we encode it?
-                String codedString =
-                        "~" + matchIndex + "~" + currentMatch.length() + "~" + (char) nextChar;
-                String concat = currentMatch + (char) nextChar;
-                // is coded string shorter than raw text?
-                if (codedString.length() <= concat.length()) {
-                    mOut.print(codedString);
-                    mSearchBuffer.append(concat); // append to the search buffer
-                    currentMatch = "";
-                    matchIndex = 0;
+            while (moveWindowAndBuffer(window, buffer, randomAccessFile, step)) {
+                step = 1;
+                Match match = checkMatches(window, buffer);
+                if (match != null) {
+                    bufferedWriter.write("<" + match.getOffset() + ";" + match.getLength() + ">");
+                    step = match.getLength();
                 } else {
-                    // otherwise, output chars one at a time from
-                    // currentMatch until we find a new match or
-                    // run out of chars
-                    currentMatch = concat;
-                    matchIndex = -1;
-                    while (currentMatch.length() > 1 && matchIndex == -1) {
-                        mOut.print(currentMatch.charAt(0));
-                        mSearchBuffer.append(currentMatch.charAt(0));
-                        currentMatch = currentMatch.substring(1);
-                        matchIndex = mSearchBuffer.indexOf(currentMatch);
+                    if (buffer.getBuffer().length() == 0) {
+                        return;
+                    } else {
+                        bufferedWriter.write(buffer.getBuffer().charAt(0));
                     }
                 }
-                // Adjust search buffer size if necessary
-                trimSearchBuffer();
             }
+            StringBuffer stringBuffer = buffer.getBuffer();
+            stringBuffer.deleteCharAt(0);
+            bufferedWriter.write(stringBuffer.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        // flush any match we may have had when EOF encountered
-        if (matchIndex != -1) {
-            String codedString =
-                    "~" + matchIndex + "~" + currentMatch.length();
-            if (codedString.length() <= currentMatch.length()) {
-                mOut.print("~" + matchIndex + "~" + currentMatch.length());
+    }
+
+    private void initializeBuffer(Buffer buffer, RandomAccessFile file) throws IOException {
+        buffer.getBuffer().setLength(0);
+        file.seek(1);
+        byte[] byteBuffer = new byte[BUFFER_SIZE];
+        file.read(byteBuffer);
+        buffer.getBuffer().append(new String(byteBuffer));
+        buffer.setStartBufferPosition(1);
+    }
+
+    private boolean moveWindowAndBuffer(Buffer window, Buffer buffer, RandomAccessFile file, int step) {
+        try {
+            file.seek(window.getStartBufferPosition() + window.getBuffer().length());
+
+            byte[] byteBuffer = new byte[step];
+            file.read(byteBuffer);
+            window.getBuffer().append(new String(byteBuffer));
+
+            int bufferLength = window.getBuffer().length();
+            if (bufferLength > MAX_WINDOW_SIZE) {
+                int deletingCount = bufferLength - MAX_WINDOW_SIZE;
+                for (int i = 0; i < deletingCount; i++) {
+                    window.deleteCharAt(0);
+                }
+            }
+
+            if (buffer.getBuffer().length() == 0) {
+                initializeBuffer(buffer, file);
             } else {
-                mOut.print(currentMatch);
+                file.seek(buffer.getStartBufferPosition() + buffer.getBuffer().length() + step);
+                if (file.read() == -1) {
+                    if (buffer.getBuffer().length() > 1) {
+                        for (int i = 0; i < step; i++) {
+                            buffer.deleteCharAt(0);
+                        }
+                        return true;
+                    } else {
+                        throw new IOException("File end");
+                    }
+                }
+
+                file.seek(buffer.getStartBufferPosition() + buffer.getBuffer().length());
+                file.read(byteBuffer);
+                buffer.getBuffer().append(new String(byteBuffer));
+                for (int i = 0; i < step; i++) {
+                    buffer.deleteCharAt(0);
+                }
+            }
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    private Match checkMatches(Buffer window, Buffer buffer) {
+        StringBuilder matchString = new StringBuilder();
+        char[] windowChars = window.getBuffer().toString().toCharArray();
+        Match match = null;
+        int windowOffset;
+        int bufferOffset = 0;
+        for (windowOffset = 0; windowOffset < windowChars.length; windowOffset++) {
+            char windowChar = windowChars[windowOffset];
+            try {
+                if (windowChar == buffer.getBuffer().charAt(bufferOffset)) {
+                    matchString.append(windowChar);
+                    bufferOffset++;
+                } else if (matchString.length() != 0) {
+                    break;
+                }
+            } catch (StringIndexOutOfBoundsException e) {
+                break;
             }
         }
-        // close files
-        mIn.close();
-        mOut.flush();
-        mOut.close();
+        if (matchString.length() > 1) {
+            match = new Match(
+                    window.getStartBufferPosition() + windowOffset - matchString.length(),
+                    matchString.length()
+            );
+        }
+        return match;
+    }
+
+    public void decompress(String inputFileName, String outputFileName) {
+        try (
+                BufferedReader bufferedReader = new BufferedReader(
+                        new InputStreamReader(
+                                new FileInputStream(inputFileName),
+                                "Cp1252"
+                        )
+                );
+                RandomAccessFile randomAccessFile = new RandomAccessFile(outputFileName, "rw")
+        ) {
+            char character;
+            int read;
+            while ((read = bufferedReader.read()) != -1) {
+                character = (char) read;
+                if (character != '<') {
+                    randomAccessFile.write(character);
+                } else {
+                    Match match = readCodeBlock(bufferedReader);
+                    byte[] buffer = new byte[match.getLength()];
+                    long endPointer = randomAccessFile.getFilePointer();
+                    randomAccessFile.seek(match.getOffset());
+                    randomAccessFile.read(buffer);
+                    randomAccessFile.seek(endPointer);
+                    randomAccessFile.write(buffer);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private Match readCodeBlock(BufferedReader bufferedReader) throws IOException {
+        char character;
+        Match match = new Match();
+
+        StringBuilder buffer = new StringBuilder();
+
+        while ((character = (char) bufferedReader.read()) != '>') {
+            if (character != ';') {
+                buffer.append(character);
+            } else {
+                match.setOffset(Integer.valueOf(buffer.toString()));
+                buffer.setLength(0);
+            }
+        }
+
+        match.setLength(Integer.valueOf(buffer.toString()));
+
+        return match;
     }
 }
