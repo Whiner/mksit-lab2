@@ -21,17 +21,22 @@ public class LZ77_v3_my {
         ) {
             Buffer window = new Buffer();
             Buffer buffer = new Buffer();
-            bufferedWriter.write(randomAccessFile.readByte());
+            byte firstByte = randomAccessFile.readByte();
+            bufferedWriter.write(firstByte);
+            System.out.print((char)firstByte);
             int step = 1;
 
             while (moveWindowAndBuffer(window, buffer, randomAccessFile, step)) {
                 step = 1;
                 Match match = checkMatches(window, buffer);
                 if (match != null) {
-                    bufferedWriter.write("<" + match.getOffset() + ";" + match.getLength() + ">");
+                    String str = "<" + match.getOffset() + ";" + match.getLength() + ">";
+                    bufferedWriter.write(str);
+                    System.out.print(str);
                     step = match.getLength();
                 } else {
                     bufferedWriter.write(buffer.getBuffer().charAt(0));
+                    System.out.print(buffer.getBuffer().charAt(0));
                 }
             }
             StringBuffer stringBuffer = buffer.getBuffer();
@@ -72,7 +77,12 @@ public class LZ77_v3_my {
             } else {
                 file.seek(buffer.getStartBufferPosition() + buffer.getBuffer().length() + step);
                 if (file.read() == -1) {
-                    throw new IOException("File end");
+                    if(buffer.getBuffer().length() > 1) {
+                        buffer.deleteCharAt(0);
+                        return true;
+                    } else {
+                        throw new IOException("File end");
+                    }
                 }
 
                 file.seek(buffer.getStartBufferPosition() + buffer.getBuffer().length());
@@ -92,19 +102,24 @@ public class LZ77_v3_my {
         StringBuilder matchString = new StringBuilder();
         char[] windowChars = window.getBuffer().toString().toCharArray();
         Match match = null;
-        int windowI = 0;
-        while (windowI < windowChars.length) {
-            final char aChar = windowChars[windowI];
-            if (aChar == buffer.getBuffer().charAt(windowI)) {
-                matchString.append(aChar);
-            } else if (windowI != 0) {
+        int windowOffset;
+        int bufferOffset = 0;
+        for (windowOffset = 0; windowOffset < windowChars.length; windowOffset++) {
+            char windowChar = windowChars[windowOffset];
+            try{
+                if (windowChar == buffer.getBuffer().charAt(bufferOffset)) {
+                    matchString.append(windowChar);
+                    bufferOffset++;
+                } else if (matchString.length() != 0) {
+                    break;
+                }
+            }catch (StringIndexOutOfBoundsException e) {
                 break;
             }
-            windowI++;
         }
-        if (windowI > 1) {
+        if (matchString.length() > 1) {
             match = new Match(
-                    window.getStartBufferPosition() + windowI - matchString.length(),
+                    window.getStartBufferPosition() + windowOffset - matchString.length(),
                     matchString.length()
             );
         }
