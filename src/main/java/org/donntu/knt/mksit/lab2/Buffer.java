@@ -42,4 +42,8 @@ public class Buffer {
         buffer.deleteCharAt(i);
         startBufferPosition++;
     }
+
+    public int length() {
+        return buffer.length();
+    }
 }

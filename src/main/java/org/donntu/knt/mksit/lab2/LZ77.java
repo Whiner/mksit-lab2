@@ -16,18 +16,18 @@ public class LZ77 {
                 RandomAccessFile randomAccessFile = new RandomAccessFile(inputFileName, "r");
                 BufferedWriter bufferedWriter = new BufferedWriter(
                         new OutputStreamWriter(
-                                new FileOutputStream(outputFileName),
-                                "Cp1252"
+                                new FileOutputStream(outputFileName)
                         )
                 )
         ) {
             Buffer window = new Buffer();
             Buffer buffer = new Buffer();
             byte firstByte = randomAccessFile.readByte();
+            window.getBuffer().append((char) firstByte);
             bufferedWriter.write(firstByte);
-            int step = 1;
-
-            while (moveWindowAndBuffer(window, buffer, randomAccessFile, step)) {
+            initializeBuffer(buffer, randomAccessFile);
+            int step;
+            do {
                 step = 1;
                 Match match = checkMatches(window, buffer);
                 if (match != null) {
@@ -40,7 +40,7 @@ public class LZ77 {
                         bufferedWriter.write(buffer.getBuffer().charAt(0));
                     }
                 }
-            }
+            } while (moveWindowAndBuffer(window, buffer, randomAccessFile, step));
             StringBuffer stringBuffer = buffer.getBuffer();
             stringBuffer.deleteCharAt(0);
             bufferedWriter.write(stringBuffer.toString());
@@ -60,46 +60,49 @@ public class LZ77 {
 
     private boolean moveWindowAndBuffer(Buffer window, Buffer buffer, RandomAccessFile file, int step) {
         try {
-            file.seek(window.getStartBufferPosition() + window.getBuffer().length());
-
             byte[] byteBuffer = new byte[step];
+            file.seek(window.getStartBufferPosition() + window.length());
             file.read(byteBuffer);
             window.getBuffer().append(new String(byteBuffer));
-
-            int bufferLength = window.getBuffer().length();
-            if (bufferLength > MAX_WINDOW_SIZE) {
-                int deletingCount = bufferLength - MAX_WINDOW_SIZE;
-                for (int i = 0; i < deletingCount; i++) {
-                    window.deleteCharAt(0);
-                }
+            if(window.length() > MAX_WINDOW_SIZE) {
+                shortenBuffer(window, window.length() - MAX_WINDOW_SIZE);
             }
 
-            if (buffer.getBuffer().length() == 0) {
-                initializeBuffer(buffer, file);
+            int i;
+            for (i = step; i >= 0; i--) {
+                file.seek(buffer.getStartBufferPosition() + buffer.length() + i);
+                if(file.read() != -1) {
+                    break;
+                }
+            }
+            if(i == 0) {
+                if(!shortenBuffer(buffer, step)){
+                    throw new IOException("File end");
+                }
             } else {
-                file.seek(buffer.getStartBufferPosition() + buffer.getBuffer().length() + step);
-                if (file.read() == -1) {
-                    if (buffer.getBuffer().length() > 1) {
-                        for (int i = 0; i < step; i++) {
-                            buffer.deleteCharAt(0);
-                        }
-                        return true;
-                    } else {
-                        throw new IOException("File end");
-                    }
+                if (byteBuffer.length != i) {
+                    byteBuffer = new byte[i];
                 }
 
-                file.seek(buffer.getStartBufferPosition() + buffer.getBuffer().length());
+                file.seek(buffer.getStartBufferPosition() + buffer.length());
                 file.read(byteBuffer);
                 buffer.getBuffer().append(new String(byteBuffer));
-                for (int i = 0; i < step; i++) {
-                    buffer.deleteCharAt(0);
-                }
+                shortenBuffer(buffer, step);
             }
             return true;
         } catch (IOException e) {
             return false;
         }
+    }
+
+    private boolean shortenBuffer(Buffer buffer, int count) {
+        if(buffer.length() == 0) {
+            return false;
+        }
+        for (int i = 0; i < count; i++) {
+            buffer.deleteCharAt(0);
+        }
+        return true;
     }
 
     private Match checkMatches(Buffer window, Buffer buffer) {
@@ -131,11 +134,11 @@ public class LZ77 {
     }
 
     public void decompress(String inputFileName, String outputFileName) {
+        new File(outputFileName).delete();
         try (
                 BufferedReader bufferedReader = new BufferedReader(
                         new InputStreamReader(
-                                new FileInputStream(inputFileName),
-                                "Cp1252"
+                                new FileInputStream(inputFileName)
                         )
                 );
                 RandomAccessFile randomAccessFile = new RandomAccessFile(outputFileName, "rw")

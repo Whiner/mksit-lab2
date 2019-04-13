@@ -11,15 +11,16 @@ public class Main {
     public static void main(String[] args) {
 
 
-        LZ77ByteEdition lz = new LZ77ByteEdition(500, 500);
-        /*String filename = "files/file.txt";
+        LZ77 lz = new LZ77(30,30);
+        //LZ77ByteEdition lz = new LZ77ByteEdition(30,30);
+        String filename = "files/file.txt";
         String compressedFilename = "files/file.txt.lz77";
-        String decompressedFilename = "files/dec_file.txt";*/
-        String filename = "files/image.bmp";
+        String decompressedFilename = "files/dec_file.txt";
+        /*String filename = "files/image.bmp";
         String compressedFilename = "files/image.bmp.lz77";
-        String decompressedFilename = "files/dec_image.bmp";
+        String decompressedFilename = "files/dec_image.bmp";*/
         try {
-            //lz.compress(filename, compressedFilename);
+            lz.compress(filename, compressedFilename);
             lz.decompress(compressedFilename, decompressedFilename);
             System.out.println("compress percent = " + CompressQualifier.compressPercent(
                     new File(filename),

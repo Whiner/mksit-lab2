@@ -150,7 +150,9 @@ public class LZ77ByteEdition {
         ) {
             byte character;
             byte startByte = (byte) '<';
-            while ((character = (byte) fileInputStream.read()) != -1) {
+            int read;
+            while ((read = fileInputStream.read()) != -1) {
+                character = (byte) read;
                 if (character != startByte) {
                     randomAccessFile.write(character);
                 } else {
@@ -169,7 +171,6 @@ public class LZ77ByteEdition {
     }
 
     private Match readCodeBlock(FileInputStream fileInputStream) throws IOException {
-
         byte centerByte = (byte) ';';
         byte endByte = (byte) '>';
         byte b;
@@ -186,13 +187,6 @@ public class LZ77ByteEdition {
         }
 
         match.setLength(Integer.valueOf(new String(byteListToByteArray(byteList))));
-       /*
-        byte b = (byte) fileInputStream.read();
-        match.setOffset(Character.getNumericValue((char) b));
-        b = (byte) fileInputStream.read();
-        b = (byte) fileInputStream.read();
-        match.setLength(Character.getNumericValue((char) b));
-        fileInputStream.read();*/
         return match;
     }
 }
