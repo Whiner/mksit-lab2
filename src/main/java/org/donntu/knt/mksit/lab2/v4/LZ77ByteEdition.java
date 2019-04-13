@@ -3,7 +3,7 @@ package org.donntu.knt.mksit.lab2.v4;
 import org.donntu.knt.mksit.lab2.Match;
 
 import java.io.*;
-import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -26,12 +26,13 @@ public class LZ77ByteEdition {
             Buffer window = new Buffer();
             Buffer buffer = new Buffer();
             byte firstByte = randomAccessFile.readByte();
+            window.getBuffer().add(firstByte);
             fileOutputStream.write(firstByte);
-            int step = 1;
-
-            while (moveWindowAndBuffer(window, buffer, randomAccessFile, step)) {
+            initializeBuffer(buffer, randomAccessFile);
+            int step;
+            do {
                 step = 1;
-                Match match = checkMatches(window, buffer);
+                Match match = getMaxMatch(window, buffer);
                 if (match != null) {
                     byte[] str = ("<" + match.getOffset() + ";" + match.getLength() + ">").getBytes();
                     fileOutputStream.write(str);
@@ -44,6 +45,7 @@ public class LZ77ByteEdition {
                     }
                 }
             }
+            while (moveWindowAndBuffer(window, buffer, randomAccessFile, step));
             List<Byte> byteList = buffer.getBuffer();
             byteList.remove(0);
             for (Byte aByte : byteList) {
@@ -67,46 +69,41 @@ public class LZ77ByteEdition {
 
     private boolean moveWindowAndBuffer(Buffer window, Buffer buffer, RandomAccessFile file, int step) {
         try {
-            file.seek(window.getStartBufferPosition() + window.getBuffer().size());
-
             byte[] byteBuffer = new byte[step];
+            file.seek(window.getStartBufferPosition() + window.length());
             file.read(byteBuffer);
-
             for (byte b : byteBuffer) {
                 window.getBuffer().add(b);
             }
-
-            int bufferLength = window.getBuffer().size();
-            if (bufferLength > MAX_WINDOW_SIZE) {
-                int deletingCount = bufferLength - MAX_WINDOW_SIZE;
-                for (int i = 0; i < deletingCount; i++) {
-                    window.deleteCharAt(0);
-                }
+            if (window.length() > MAX_WINDOW_SIZE) {
+                shortenBuffer(window, window.length() - MAX_WINDOW_SIZE);
             }
 
-            if (buffer.getBuffer().size() == 0) {
-                initializeBuffer(buffer, file);
+            int i = step + 1;
+            do {
+                i--;
+                file.seek(buffer.getStartBufferPosition() + buffer.length() + i);
+            } while(file.read() == -1);
+
+            if(i == 0) {
+                i++;
+            }
+
+            if (i < 0) {
+                if (!shortenBuffer(buffer, step)) {
+                    throw new IOException("File end");
+                }
             } else {
-                file.seek(buffer.getStartBufferPosition() + buffer.getBuffer().size() + step);
-                if (file.read() == -1) {
-                    if (buffer.getBuffer().size() > 1) {
-                        for (int i = 0; i < step; i++) {
-                            buffer.deleteCharAt(0);
-                        }
-                        return true;
-                    } else {
-                        throw new IOException("File end");
-                    }
+                if (byteBuffer.length != i) {
+                    byteBuffer = new byte[i];
                 }
 
-                file.seek(buffer.getStartBufferPosition() + buffer.getBuffer().size());
+                file.seek(buffer.getStartBufferPosition() + buffer.length());
                 file.read(byteBuffer);
                 for (byte b : byteBuffer) {
                     buffer.getBuffer().add(b);
                 }
-                for (int i = 0; i < step; i++) {
-                    buffer.deleteCharAt(0);
-                }
+                shortenBuffer(buffer, step);
             }
             return true;
         } catch (IOException e) {
@@ -114,16 +111,25 @@ public class LZ77ByteEdition {
         }
     }
 
-    private Match checkMatches(Buffer window, Buffer buffer) {
+    private boolean shortenBuffer(Buffer buffer, int count) {
+        if (buffer.length() == 0) {
+            return false;
+        }
+        for (int i = 0; i < count; i++) {
+            buffer.deleteCharAt(0);
+        }
+        return true;
+    }
+
+    private Match checkMatch(List<Byte> window, List<Byte> buffer) {
         List<Byte> byteMatches = new LinkedList<>();
-        List<Byte> bytes = window.getBuffer();
         Match match = null;
         int windowOffset;
         int bufferOffset = 0;
-        for (windowOffset = 0; windowOffset < bytes.size(); windowOffset++) {
-            byte windowByte = bytes.get(windowOffset);
+        for (windowOffset = 0; windowOffset < window.size(); windowOffset++) {
+            byte windowByte = window.get(windowOffset);
             try {
-                if (windowByte == buffer.getBuffer().get(bufferOffset)) {
+                if (windowByte == buffer.get(bufferOffset)) {
                     byteMatches.add(windowByte);
                     bufferOffset++;
                 } else if (byteMatches.size() != 0) {
@@ -135,11 +141,37 @@ public class LZ77ByteEdition {
         }
         if (byteMatches.size() > 1) {
             match = new Match(
-                    window.getStartBufferPosition() + windowOffset - byteMatches.size(),
+                    windowOffset - byteMatches.size(),
                     byteMatches.size()
             );
         }
         return match;
+    }
+
+    private Match getMaxMatch(Buffer window, Buffer buffer) {
+        List<Byte> windowBytes = new LinkedList<>(window.getBuffer());
+        int windowOffset = 0;
+        List<Match> matches = new LinkedList<>();
+
+        while (windowBytes.size() != 0) {
+            Match match = checkMatch(windowBytes, buffer.getBuffer());
+            if (match == null) {
+                break;
+            }
+            match.setOffset(window.getStartBufferPosition() + windowOffset + match.getOffset());
+            windowOffset = match.getOffset() + match.getLength();
+            if (windowOffset > windowBytes.size()) {
+                windowBytes.clear();
+            } else {
+                windowBytes = windowBytes.subList(windowOffset, windowBytes.size());
+            }
+            matches.add(match);
+        }
+
+        if (!matches.isEmpty()) {
+            return matches.stream().max(Comparator.comparingInt(Match::getLength)).get();
+        }
+        return null;
     }
 
     public void decompress(String inputFileName, String outputFileName) {

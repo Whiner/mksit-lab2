@@ -1,6 +1,7 @@
 package org.donntu.knt.mksit.lab2;
 
 import java.io.*;
+import java.util.*;
 
 public class LZ77 {
     private final int MAX_WINDOW_SIZE;
@@ -29,7 +30,7 @@ public class LZ77 {
             int step;
             do {
                 step = 1;
-                Match match = checkMatches(window, buffer);
+                Match match = checkMaxMatch(window, buffer);
                 if (match != null) {
                     bufferedWriter.write("<" + match.getOffset() + ";" + match.getLength() + ">");
                     step = match.getLength();
@@ -105,16 +106,16 @@ public class LZ77 {
         return true;
     }
 
-    private Match checkMatches(Buffer window, Buffer buffer) {
+    private Match checkMatch(StringBuilder window, StringBuilder buffer) {
         StringBuilder matchString = new StringBuilder();
-        char[] windowChars = window.getBuffer().toString().toCharArray();
+        char[] windowChars = window.toString().toCharArray();
         Match match = null;
         int windowOffset;
         int bufferOffset = 0;
         for (windowOffset = 0; windowOffset < windowChars.length; windowOffset++) {
             char windowChar = windowChars[windowOffset];
             try {
-                if (windowChar == buffer.getBuffer().charAt(bufferOffset)) {
+                if (windowChar == buffer.charAt(bufferOffset)) {
                     matchString.append(windowChar);
                     bufferOffset++;
                 } else if (matchString.length() != 0) {
@@ -126,11 +127,34 @@ public class LZ77 {
         }
         if (matchString.length() > 1) {
             match = new Match(
-                    window.getStartBufferPosition() + windowOffset - matchString.length(),
+                    windowOffset - matchString.length(),
                     matchString.length()
             );
         }
         return match;
+    }
+
+    private Match checkMaxMatch(Buffer window, Buffer buffer) {
+        StringBuilder windowString = new StringBuilder(window.getBuffer().toString());
+        StringBuilder bufferString = new StringBuilder(buffer.getBuffer().toString());
+        int windowOffset = 0;
+        List<Match> matches = new LinkedList<>();
+
+        while(windowString.length() != 0) {
+            Match match = checkMatch(windowString, bufferString);
+            if(match == null) {
+                break;
+            }
+            match.setOffset(window.getStartBufferPosition() + windowOffset + match.getOffset());
+            windowOffset = match.getOffset() + match.getLength();
+            windowString.delete(0, windowOffset);
+            matches.add(match);
+        }
+
+        if (!matches.isEmpty()) {
+            return matches.stream().max(Comparator.comparingInt(Match::getLength)).get();
+        }
+        return null;
     }
 
     public void decompress(String inputFileName, String outputFileName) {

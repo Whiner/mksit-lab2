@@ -45,4 +45,8 @@ public class Buffer {
         buffer.remove(i);
         startBufferPosition++;
     }
+
+    public int length() {
+        return buffer.size();
+    }
 }
