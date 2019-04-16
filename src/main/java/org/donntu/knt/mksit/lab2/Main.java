@@ -1,7 +1,5 @@
 package org.donntu.knt.mksit.lab2;
 
-import org.donntu.knt.mksit.lab2.v4.LZ77ByteEdition;
-
 import java.io.File;
 
 /**
@@ -12,8 +10,7 @@ public class Main {
     //6612312345612345666669
     public static void main(String[] args) {
 
-        //LZ77 lz = new LZ77(30,30);
-        LZ77ByteEdition lz = new LZ77ByteEdition(200, 200);
+        LZ77 lz = new LZ77(200, 200);
         /*String filename = "files/file.txt";
         String compressedFilename = "files/file.txt.lz77";
         String decompressedFilename = "files/dec_file.txt";*/

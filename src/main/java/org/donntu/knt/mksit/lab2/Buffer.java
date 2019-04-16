@@ -1,7 +1,10 @@
 package org.donntu.knt.mksit.lab2;
 
+import java.util.LinkedList;
+import java.util.List;
+
 public class Buffer {
-    private StringBuffer buffer = new StringBuffer();
+    private List<Byte> buffer = new LinkedList<>();
     private int startBufferPosition = 0;
 
     private static int MAX_WINDOW_SIZE = 10;
@@ -14,11 +17,11 @@ public class Buffer {
         MAX_WINDOW_SIZE = maxWindowSize;
     }
 
-    public StringBuffer getBuffer() {
+    public List<Byte> getBuffer() {
         return buffer;
     }
 
-    public void setBuffer(StringBuffer buffer) {
+    public void setBuffer(List<Byte> buffer) {
         this.buffer = buffer;
     }
 
@@ -30,7 +33,7 @@ public class Buffer {
         this.startBufferPosition = startBufferPosition;
     }
 
-    public Buffer(StringBuffer buffer, int startBufferPosition) {
+    public Buffer(List<Byte> buffer, int startBufferPosition) {
         this.buffer = buffer;
         this.startBufferPosition = startBufferPosition;
     }
@@ -39,11 +42,11 @@ public class Buffer {
     }
 
     public void deleteCharAt(int i) {
-        buffer.deleteCharAt(i);
+        buffer.remove(i);
         startBufferPosition++;
     }
 
     public int length() {
-        return buffer.length();
+        return buffer.size();
     }
 }
