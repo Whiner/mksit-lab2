@@ -59,7 +59,8 @@ public class LZ77ByteEdition {
     private void initializeBuffer(Buffer buffer, RandomAccessFile file) throws IOException {
         buffer.getBuffer().clear();
         file.seek(1);
-        byte[] byteBuffer = new byte[BUFFER_SIZE];
+        long length = file.length();
+        byte[] byteBuffer = new byte[BUFFER_SIZE > length ? (int) length - 1 : BUFFER_SIZE];
         file.read(byteBuffer);
         for (byte b : byteBuffer) {
             buffer.getBuffer().add(b);
