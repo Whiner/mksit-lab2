@@ -80,15 +80,10 @@ public class LZ77ByteEdition {
                 shortenBuffer(window, window.length() - MAX_WINDOW_SIZE);
             }
 
-            int i = step + 1;
-            do {
-                i--;
-                file.seek(buffer.getStartBufferPosition() + buffer.length() + i);
-            } while(file.read() == -1);
-
-            if(i == 0) {
-                i++;
-            }
+            int currentPosition = buffer.getStartBufferPosition() + buffer.length();
+            long length = file.length();
+            int needPosition = currentPosition + step;
+            int i = length < needPosition ? (int) (length - currentPosition) : step;
 
             if (i < 0) {
                 if (!shortenBuffer(buffer, step)) {
@@ -140,7 +135,7 @@ public class LZ77ByteEdition {
                 break;
             }
         }
-        if (byteMatches.size() > 1) {
+        if (byteMatches.size() > 5) {
             match = new Match(
                     windowOffset - byteMatches.size(),
                     byteMatches.size()
