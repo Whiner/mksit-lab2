@@ -10,6 +10,7 @@ import static org.donntu.knt.mksit.lab2.ByteUtils.byteListToByteArray;
 public class LZ77 {
     private final int MAX_WINDOW_SIZE;
     private final int BUFFER_SIZE;
+    private final int MIN_MATCH_SIZE_TO_REPLACE = 5;
 
     public LZ77(int maxWindowSize, int bufferSize) {
         this.MAX_WINDOW_SIZE = maxWindowSize;
@@ -133,7 +134,7 @@ public class LZ77 {
                 break;
             }
         }
-        if (byteMatches.size() > 5) {
+        if (byteMatches.size() > MIN_MATCH_SIZE_TO_REPLACE) {
             match = new Match(
                     windowOffset - byteMatches.size(),
                     byteMatches.size()
