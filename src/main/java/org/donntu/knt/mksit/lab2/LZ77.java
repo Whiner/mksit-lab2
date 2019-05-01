@@ -105,7 +105,7 @@ public class LZ77 {
     }
 
     private Match checkMatch(List<Byte> window, List<Byte> buffer) {
-        List<Byte> byteMatches = new LinkedList<>();
+        int byteMatchesCount = 0;
         int windowOffset;
         int bufferOffset = 0;
 
@@ -114,9 +114,9 @@ public class LZ77 {
             byte windowByte = window.get(windowOffset);
             try {
                 if (windowByte == buffer.get(bufferOffset) && bufferOffset != buffer.size() - 1) {
-                    byteMatches.add(windowByte);
+                    byteMatchesCount++;
                     bufferOffset++;
-                } else if (byteMatches.size() != 0) {
+                } else if (byteMatchesCount != 0) {
                     break;
                 }
             } catch (IndexOutOfBoundsException e) {
@@ -124,12 +124,11 @@ public class LZ77 {
             }
         }
 
-        if (!byteMatches.isEmpty()) {
-            byte nextByte = buffer.get(byteMatches.size());
-
+        if (byteMatchesCount != 0) {
+            byte nextByte = buffer.get(byteMatchesCount);
             return new Match(
-                    windowOffset - byteMatches.size(),
-                    byteMatches.size(),
+                    windowOffset - byteMatchesCount,
+                    byteMatchesCount,
                     nextByte
             );
         } else {
