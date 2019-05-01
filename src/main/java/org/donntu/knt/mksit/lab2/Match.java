@@ -6,16 +6,17 @@ package org.donntu.knt.mksit.lab2;
 public class Match {
     private int offset;
     private int length;
+    private byte nextByte;
 
 
     public Match() {
-        this(-1,-1);
+        this(-1,-1, (byte) -1);
     }
 
-    public Match(int offset, int length) {
-        super();
+    public Match(int offset, int length, byte nextByte) {
         this.offset = offset;
         this.length = length;
+        this.nextByte = nextByte;
     }
 
     public int getOffset() {
@@ -34,4 +35,11 @@ public class Match {
         this.length = matDistance;
     }
 
+    public byte getNextByte() {
+        return nextByte;
+    }
+
+    public void setNextByte(byte nextByte) {
+        this.nextByte = nextByte;
+    }
 }

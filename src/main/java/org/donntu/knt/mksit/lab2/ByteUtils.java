@@ -10,4 +10,9 @@ public class ByteUtils {
         }
         return byteArray;
     }
+
+    public static String byteToBits(byte b, int size) {
+        return String.format("%" + size + "s", Integer.toBinaryString(b & 0xFF))
+                .replace(' ', '0');
+    }
 }
