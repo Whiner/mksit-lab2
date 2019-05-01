@@ -6,6 +6,10 @@ import java.util.List;
 
 import static org.donntu.knt.mksit.lab2.ByteUtils.byteToBits;
 
+/**
+ * @author Shilenko Alexander
+ */
+
 public class LZ77 {
     private final int MAX_WINDOW_SIZE = (1 << 6) - 1;
     private final int BUFFER_SIZE = (1 << 3) - 1;
