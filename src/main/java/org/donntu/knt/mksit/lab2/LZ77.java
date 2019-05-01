@@ -9,12 +9,12 @@ import static org.donntu.knt.mksit.lab2.ByteUtils.byteListToByteArray;
 import static org.donntu.knt.mksit.lab2.ByteUtils.byteToBits;
 
 public class LZ77 {
-    private final int MAX_WINDOW_SIZE = (1 << 5) - 1;
-    private final int BUFFER_SIZE = (1 << 3) - 1;
+    private final int MAX_WINDOW_SIZE = (1 << 6) - 1;
+    private final int BUFFER_SIZE = (1 << 4) - 1;
 
-    private final int OFFSET_LENGTH = (int) Math.ceil(Math.log1p(MAX_WINDOW_SIZE));
-    private final int LENGTH_LENGTH = (int) Math.ceil(Math.log1p(BUFFER_SIZE));
-    private final int CHAR_LENGTH = 8;
+    private final int OFFSET_LENGTH = (int) Math.ceil(Math.log(MAX_WINDOW_SIZE) / Math.log(2));
+    private final int LENGTH_LENGTH = (int) Math.ceil(Math.log(BUFFER_SIZE) / Math.log(2));
+    private final int CHAR_LENGTH = (int) Math.ceil(Math.log(255) / Math.log(2));
 
     public void compress(String inputFileName, String outputFileName) {
         try (
@@ -72,11 +72,11 @@ public class LZ77 {
 
     private boolean moveWindowAndBuffer(List<Byte> window, List<Byte> buffer, RandomAccessFile file, int step) throws IOException {
 
-        try {
-            for (int i = 0; i < step; i++) {
-                window.add(buffer.remove(0));
-            }
-        } catch (IndexOutOfBoundsException e) {
+        for (int i = 0; i < step; i++) {
+            window.add(buffer.remove(0));
+        }
+
+        if(buffer.isEmpty()) {
             return false;
         }
 
@@ -86,7 +86,9 @@ public class LZ77 {
 
         if(file.getFilePointer() < file.length()) {
             for (int i = 0; i < step; i++) {
-                buffer.add(file.readByte());
+                try {
+                    buffer.add(file.readByte());
+                } catch (IOException ignored) { }
             }
         }
 
