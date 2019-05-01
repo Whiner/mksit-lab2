@@ -15,4 +15,9 @@ public class ByteUtils {
         return String.format("%" + size + "s", Integer.toBinaryString(b & 0xFF))
                 .replace(' ', '0');
     }
+
+    public static String intToBits(int b, int size) {
+        return String.format("%" + size + "s", Integer.toBinaryString(b))
+                .replace(' ', '0');
+    }
 }

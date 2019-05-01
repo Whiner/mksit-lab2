@@ -1,25 +1,25 @@
 package org.donntu.knt.mksit.lab2;
 
 import java.io.*;
-import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 
-import static org.donntu.knt.mksit.lab2.ByteUtils.byteListToByteArray;
 import static org.donntu.knt.mksit.lab2.ByteUtils.byteToBits;
 
 public class LZ77 {
     private final int MAX_WINDOW_SIZE = (1 << 6) - 1;
-    private final int BUFFER_SIZE = (1 << 4) - 1;
+    private final int BUFFER_SIZE = (1 << 3) - 1;
 
     private final int OFFSET_LENGTH = (int) Math.ceil(Math.log(MAX_WINDOW_SIZE) / Math.log(2));
     private final int LENGTH_LENGTH = (int) Math.ceil(Math.log(BUFFER_SIZE) / Math.log(2));
     private final int CHAR_LENGTH = (int) Math.ceil(Math.log(255) / Math.log(2));
 
-    public void compress(String inputFileName, String outputFileName) {
+    public String compress(String inputFileName) {
+        String outputFileName = getNameCompressedFile(inputFileName);
+        new File(outputFileName).delete();
         try (
                 RandomAccessFile randomAccessFile = new RandomAccessFile(inputFileName, "r");
-                FileOutputStream fileOutputStream = new FileOutputStream(outputFileName)
+                FileOutputStream writer = new FileOutputStream(outputFileName)
         ) {
             List<Byte> window = new LinkedList<>();
             List<Byte> buffer = new LinkedList<>();
@@ -30,7 +30,7 @@ public class LZ77 {
                 Match match = checkMatch(window, buffer);
                 binaryBuffer.append(matchToBits(match));
                 while (binaryBuffer.length() >= 8) {
-                    fileOutputStream.write(Integer.parseInt(binaryBuffer.substring(0, 8), 2));
+                    writer.write(Integer.parseInt(binaryBuffer.substring(0, 8), 2));
                     binaryBuffer.delete(0, 8);
                 }
                 step = match.getLength() == 0 ? 1 : match.getLength();
@@ -38,19 +38,20 @@ public class LZ77 {
             while (moveWindowAndBuffer(window, buffer, randomAccessFile, step));
 
             while (binaryBuffer.length() > 0) {
-                if(binaryBuffer.length() < 8) {
+                if (binaryBuffer.length() < 8) {
                     int zeroCount = 8 - binaryBuffer.length();
                     for (int i = 0; i < zeroCount; i++) {
                         binaryBuffer.append('0');
                     }
                 }
-                fileOutputStream.write(Integer.parseInt(binaryBuffer.substring(0, 8), 2));
+                writer.write(Integer.parseInt(binaryBuffer.substring(0, 8), 2));
                 binaryBuffer.delete(0, 8);
             }
 
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return outputFileName;
     }
 
     private String matchToBits(Match match) {
@@ -76,7 +77,7 @@ public class LZ77 {
             window.add(buffer.remove(0));
         }
 
-        if(buffer.isEmpty()) {
+        if (buffer.isEmpty()) {
             return false;
         }
 
@@ -84,11 +85,12 @@ public class LZ77 {
             shortenBuffer(window, window.size() - MAX_WINDOW_SIZE);
         }
 
-        if(file.getFilePointer() < file.length()) {
+        if (file.getFilePointer() < file.length()) {
             for (int i = 0; i < step; i++) {
                 try {
                     buffer.add(file.readByte());
-                } catch (IOException ignored) { }
+                } catch (IOException ignored) {
+                }
             }
         }
 
@@ -96,14 +98,10 @@ public class LZ77 {
 
     }
 
-    private boolean shortenBuffer(List<Byte> buffer, int count) {
-        if (buffer.size() == 0) {
-            return false;
-        }
-        if (count > 0) {
+    private void shortenBuffer(List<Byte> buffer, int count) {
+        if (!buffer.isEmpty() && count > 0) {
             buffer.subList(0, count).clear();
         }
-        return true;
     }
 
     private Match checkMatch(List<Byte> window, List<Byte> buffer) {
@@ -139,17 +137,18 @@ public class LZ77 {
         }
     }
 
-    public void decompress(String inputFileName, String outputFileName) {
+    public String decompress(String inputFileName) {
+        String outputFileName = getNameDecompressedFile(inputFileName);
         new File(outputFileName).delete();
         try (
                 RandomAccessFile file = new RandomAccessFile(inputFileName, "r");
-                BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(outputFileName))
+                FileOutputStream writer = new FileOutputStream(outputFileName)
         ) {
             StringBuilder binaryBuffer = new StringBuilder();
             List<Byte> window = new LinkedList<>();
             final int matchSize = OFFSET_LENGTH + LENGTH_LENGTH + CHAR_LENGTH;
-            while(file.getFilePointer() <= file.length()) {
-                while(binaryBuffer.length() < matchSize) {
+            while (file.getFilePointer() < file.length()) {
+                while (binaryBuffer.length() < matchSize) {
                     binaryBuffer.append(byteToBits(file.readByte(), 8));
                 }
                 int offset = Integer.parseInt(binaryBuffer.substring(0, OFFSET_LENGTH), 2);
@@ -159,24 +158,39 @@ public class LZ77 {
                 int nextByte = Integer.parseInt(binaryBuffer.substring(0, CHAR_LENGTH), 2);
                 binaryBuffer.delete(0, CHAR_LENGTH);
 
-                if(length == 0) {
+                if (length == 0) {
                     window.add((byte) nextByte);
-                    bufferedWriter.write(nextByte);
+                    writer.write(nextByte);
                 } else {
                     for (int i = offset; i < offset + length; i++) {
                         Byte e = window.get(i);
                         window.add(e);
-                        bufferedWriter.write(e);
+                        writer.write(e);
                     }
                 }
 
-                if(window.size() > MAX_WINDOW_SIZE) {
+                if (window.size() > MAX_WINDOW_SIZE) {
                     window.subList(0, window.size() - MAX_WINDOW_SIZE).clear();
                 }
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("Completed");
         }
+        return outputFileName;
+    }
+
+    private String getNameCompressedFile(String filename) {
+        return filename + ".lz77";
+    }
+
+    private String getNameDecompressedFile(String filename) {
+        String[] split = filename.split("/");
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int i = 0; i < split.length - 1; i++) {
+            stringBuilder.append(split[i]).append('/');
+        }
+        stringBuilder.append("decoded_").append(split[split.length - 1]);
+        return stringBuilder.toString().replace(".lz77", "");
     }
 }
